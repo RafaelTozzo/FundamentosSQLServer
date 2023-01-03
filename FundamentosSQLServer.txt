@@ -1,0 +1,348 @@
+Fundamentos SQL Server usando Docker e Azure Data Studio 
+
+
+Criar um DATABASE:
+    CERATE DATABASE [Curso]
+
+
+Deletar DATABASE em uso:
+    USE [master];
+
+    DECLARE @kill varchar(8000) = '';  
+    SELECT @kill = @kill + 'kill ' + CONVERT(varchar(5), session_id) + ';'  
+    FROM sys.dm_exec_sessions
+    WHERE database_id  = db_id('Curso')
+
+    EXEC(@kill);
+
+    DROP DATABASE [Curso]  ---> Comando para deletar DATABASE
+
+
+Criar tabela:
+    CERATE TABLE [Aluno](
+        [Id] INT,
+        [Nome] NVARCHAR(80),
+        [Nascimento] DATETIME,
+        [Active] BIT,
+    )
+
+
+Excluir tabela:
+    DROP TABLE [Aluno]
+
+
+Adicionar item a tabela:
+    ALTER TABLE [Aluno]
+        ADD [Document] NVARCHAR(11)
+
+
+Excluir coluna:
+    ALTER TABLE [Aluno]
+        DROP COLUMN [Document] 
+
+
+ALTER - Alterar tabela:
+    ALTER TABLE [Aluno]
+        ALTER COLUMN [Document] CHAR(11)
+
+
+Primary Key:
+    Usa a condição "and/&"
+    Para nomear a PRIMARY KEY: CONSTRAINT [PK_Aluno] PRIMARY KEY([Id])
+
+    Para nomear uma UNIQUE KEY: CONSTRAINT [UQ_Aluno_Email] UNIQUE ([Email]),
+
+    CREATE TABLE [Aluno](
+        [Id] INT NOT NULL,
+        [Nome] NVARCHAR(80) NOT NULL,
+        [Email] NVARCHAR(180) NOT NULL,
+        [Nascimento] DATETIME NULL,
+        [Active] BIT NOT NULL DEFAULT(0),
+
+        CONSTRAINT [PK_Aluno] PRIMARY KEY([Id]),
+
+        CONSTRAINT [UQ_Aluno_Email] UNIQUE ([Email]),
+    )
+
+
+Composite Key:
+    Chaves compostas usa o metodo de associação de tabelas Ex:
+
+    CREATE TABLE [Curso](
+        [Id] INT NOT NULL,
+        [Nome] NVARCHAR(80) NOT NULL,
+        [CategoriaId] INT NOT NULL,
+  
+        CONSTRAINT [PK_Curso] PRIMARY KEY([Id]),
+        CONSTRAINT [FK_Curso_Categoria] FOREIGN KEY([CategoriaId])
+            REFERENCES [Categoria](Id)
+    )
+    GO
+
+    CREATE TABLE [Categoria](
+        [Id] INT NOT NULL,
+        [Nome] NVARCHAR(80) NOT NULL,
+  
+        CONSTRAINT [PK_Categoria] PRIMARY KEY([Id]),
+    )
+    GO
+
+
+INDEX - Indices:
+    Indices serve para fazer consultas no banco, não é recomendado criar indices 
+    para todos os campos pois prejudica o desempenho do banco
+
+    Para criar um INDEX:
+    CREATE INDEX [IX_Aluno_Email] ON [Aluno]([Email])
+
+
+IDENTITY:
+    Adiciona um indice sequencial a nossa tabela, para que cada vez que vc criar um item
+    ele vai seguir a sequencia incrementando de 1 em 1.
+    Ex: /*Criar indice 1, incrementando de 1 em 1 atumomaticamente para os novos que forem adicionados*/
+    CREATE TABLE [Aluno](
+        [Id] INT NOT NULL IDENTITY(1, 1),
+
+
+INSERT:
+    Adiciona itens a tabela:
+
+    CREATE DATABASE [Cursos]
+    GO
+
+    USE [Cursos]
+
+    CREATE TABLE [Categoria](
+        [Id] INT NOT NULL IDENTITY(1, 1),
+        [Nome] NVARCHAR(80) NOT NULL,
+  
+        CONSTRAINT [PK_Categoria] PRIMARY KEY([Id]),
+    )
+    GO
+
+    CREATE TABLE [Curso](
+        [Id] INT NOT NULL IDENTITY(1, 1),
+        [Nome] NVARCHAR(80) NOT NULL,
+        [CategoriaId] INT NOT NULL,
+  
+        CONSTRAINT [PK_Curso] PRIMARY KEY([Id]),
+        CONSTRAINT [FK_Curso_Categoria] FOREIGN KEY([CategoriaId])
+            REFERENCES [Categoria](Id)
+    )
+    GO
+
+    INSERT INTO [Categoria]([Nome]) VALUES('Backend')
+    INSERT INTO [Categoria]([Nome]) VALUES('Frontend')
+    INSERT INTO [Categoria]([Nome]) VALUES('Mobile')
+
+    INSERT INTO [Curso]([Nome], [CategoriaId]) VALUES('Fundamentos de C#', 1)
+    INSERT INTO [Curso]([Nome], [CategoriaId]) VALUES('Fundammentos OOP', 1)
+    INSERT INTO [Curso]([Nome], [CategoriaId]) VALUES('Angular', 2)
+    INSERT INTO [Curso]([Nome], [CategoriaId]) VALUES('Flutter', 3)
+
+
+SELECT:
+    Seleciona algo de.
+
+    SELECT * FROM [Curso] --> Seleciona tudo do banco, caso o banco tenha milhoes de informações
+                              isso vai congelar e travar o banco.
+
+    SELECT TOP 50 * FROM [Curso] --> Seleciona apenas os 50 primeiros itens do banco
+
+    SELECT TOP 50 [Id], [Nome] FROM [Curso] --> Não usar o * melhora o desempenho do banco
+
+    Formar de tipagem para melhor leitura do script:
+        SELECT TOP 50
+            [Id], [Nome]
+        FROM
+            [Curso]
+
+
+QUERIES:
+    Para otimizar o desempenho do WHERE usar na mesma orgem do SELECT
+    Consultar algo com um valor:
+
+    WHERE [NomeDaTabela]  = 1    Igual
+    WHERE [NomeDaTabela] != 1   Diferente
+    WHERE [NomeDaTabela]  < 1    Maior
+    WHERE [NomeDaTabela] <= 1   Maior ou Igual
+    WHERE [NomeDaTabela]  > 1    Menor
+    WHERE [NomeDaTabela] >= 1   Menor ou Igual
+    
+
+    USE [Cursos]
+
+    SELECT TOP 100 
+        [Id], [Nome], [CategoriaId]
+    FROM
+        [Curso]
+    WHERE
+        [Id] = 1 AND/OR 
+        [CategoriaId] = 1 
+
+
+ORDER BY:
+    ORDER BY --> Ordena uma tabela, podendo ser: 
+    ASC - Menor para maior
+    DESC - Maior para menor
+
+    USE [Cursos]
+
+    SELECT TOP 100 
+        [Id], [Nome], [CategoriaId]
+    FROM
+        [Curso]
+    ORDER BY
+        [Nome]
+
+
+UPDATE:
+    Sempre utilizar o WHERE, para não cagar o banco de dados e alterar todos os campos.
+    Usando:     BEGIN TRANSACTION 
+    Depois:     ROLLBACK
+
+    Vc consegur ver quantas linhas foram afetadas pelo script se foi o resultado esperado
+    caso for isso mesmo alterar o ROLLBACK para COMMIT.
+
+    Podendo ser feito pelo Id COM ROLLBACK:
+
+    SELECT TOP 100 * FROM [Categoria]
+
+    BEGIN TRANSACTION
+        UPDATE
+            [Categoria]
+        SET
+            [Nome] = 'Azure'
+        WHERE
+            [Id] = 3
+        SELECT TOP 100 * FROM [Categoria]
+    ROLLBACK
+
+    Ou pelo Nome:
+
+    BEGIN TRANSACTION
+        UPDATE
+            [Categoria]
+        SET
+            [Nome] = 'Azure'
+        WHERE
+            [Nome] = 'Mobile'
+        SELECT TOP 100 * FROM [Categoria]
+    ROLLBACK
+
+    Após confirmar para fazer a alteração trocar ROLLBACK pelo COMMIT:
+
+    Pelo Id:
+
+    SELECT TOP 100 * FROM [Categoria]
+
+    BEGIN TRANSACTION
+        UPDATE
+            [Categoria]
+        SET
+            [Nome] = 'Azure'
+        WHERE
+            [Id] = 3
+    COMMIT
+
+    Pelo nome:
+
+    SELECT TOP 100 * FROM [Categoria]
+
+    BEGIN TRANSACTION
+        UPDATE
+            [Categoria]
+        SET
+            [Nome] = 'Azure'
+        WHERE
+            [Nome] = 'Mobile'
+    COMMIT
+
+
+DELETE:
+    Sempre utilizar o WHERE, para não cagar o banco de dados e deletar todos os campos.
+    Usando:     BEGIN TRANSACTION 
+    Depois:     ROLLBACK
+    
+    Para ver os resustados antes do DELETE:
+
+    SELECT TOP 100 * FROM [Categoria]
+
+    BEGIN TRANSACTION
+        DELETE
+            [Categoria]
+        WHERE
+            [Id] = 3
+        SELECT TOP 100 * FROM [Categoria]
+    ROLLBACK
+
+    Para deletar alterar ROLLBACK para COMMIT:
+
+    SELECT TOP 100 * FROM [Categoria]
+
+    BEGIN TRANSACTION
+        DELETE
+            [Categoria]
+        WHERE
+            [Id] = 3
+    COMMIT 
+
+
+SOMAS e COUNTS:
+
+    Somar:
+    SELECT TOP 100 
+        SUM([Id]) 
+    FROM 
+        [Curso]
+
+    Valor minimo:
+    SELECT TOP 100 
+        MIN([Id]) 
+    FROM 
+        [Curso]
+
+    Valor maximo:
+    SELECT TOP 100 
+        MAX([Id]) 
+    FROM 
+        [Curso]
+
+    Média:
+    SELECT TOP 100 
+        AVG([Id]) 
+    FROM 
+        [Curso]
+
+    Contar:
+    SELECT TOP 100 
+        COUNT([Id]) 
+    FROM 
+        [Curso]
+
+
+LIKE:
+    Para consultar alguma informação no banco que contenha um palavra chave:
+
+    usando o % no começo do nome é palavra começa com x
+    usando o % no final do nome é palavra termina com x
+    usando o % no começo e no final do nome consulta a palavra como um todo
+
+    SELECT TOP 100 
+        [Curso] 
+    WHERE 
+        [Nome] LIKE '%Fundamentos%'
+
+
+INNER JOIN:
+    Cria uma nova tabela não fisica juntando duas ou mais tabelas
+
+    SELECT TOP 100 
+        [Curso].[Id], 
+        [Curso].[Nome], 
+        [Curso].[Id] AS [Categoria], 
+        [Categoria].[Nome]
+    FROM 
+        [Curso]
+        INNER JOIN [Categoria]
+        ON [Curso].[CategoriaId] = [Categoria].[Id]
